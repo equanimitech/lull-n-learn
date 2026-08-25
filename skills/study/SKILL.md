@@ -1,29 +1,33 @@
 ---
 name: study
-description: Run a spaced-repetition study session over due lull-n-learn cards. Use when the user runs /study, says "let's study", "quiz me", or wants to practice what they've been learning.
+description: Run a spaced-repetition study session over due lull-n-learn cards. Use when the user runs /study, says "let's study", "quiz me", or wants to practice what they've been learning. Accepts an optional tag argument to filter by theme (e.g. /study rust, /study project:abc).
 ---
 
 # Study session
 
 An FSRS-driven retrieval session. Retrieval means production: the user answers before seeing anything. The user can stop at any time and stopping is always fine.
 
+## Arguments
+
+`$ARGUMENTS` may contain a tag to filter by (e.g. `rust`, `project:abc`). If present, pass it as `--tag <tag>` to the `due` command. If empty, fetch all due cards.
+
 ## Loop
 
-1. Fetch due cards:
+1. Fetch due cards **without answers**:
 
-   node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" due --limit 10
+   node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" due --limit 10 --hide-back [--tag <tag>]
 
-   If ARGUMENTS is non-empty, pass it as a tag filter:
-
-   node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" due --limit 10 --tag "ARGUMENTS"
-
-   This filters to cards whose tags contain the argument (e.g. `/study italian cooking` shows only cards tagged with "italian-cooking").
+   The `--hide-back` flag strips the `back` field so you cannot see — or leak — the answer before the user does. If `$ARGUMENTS` is non-empty, pass it as `--tag`.
 
 2. If the list is empty: say "Nothing is due right now." and stop. Do NOT say when the next card is due, how many cards exist, or suggest coming back later.
 3. For each card, one at a time:
-   a. Show ONLY the front, phrased as the question it is. Never reveal the back first. Never say how many cards are in the batch or remain.
+   a. Show ONLY the front, phrased as the question it is. Never reveal the back first. Never say how many cards are in the batch or remain. Do NOT use `AskUserQuestion` with answer options — the user must type their answer freely with no choices to pick from.
    b. Wait for the user's typed answer.
-   c. Compare their answer to the back. Reveal the back and give one or two sentences of feedback: what they got, what they missed. If the card has a `ref` field (a URL to the study guide section), mention it after feedback: "See the study guide: <ref>" — this lets the user look up context if they want to go deeper. Don't repeat the ref on cards rated `easy`.
+   c. **After** the user answers, reveal the back:
+
+      node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" reveal <cardId>
+
+      Compare their answer to the revealed back. Give one or two sentences of feedback: what they got, what they missed. If the response has a `ref` field (a URL to the study guide section), mention it after feedback: "See the study guide: <ref>" — this lets the user look up context if they want to go deeper. Don't repeat the ref on cards rated `easy`.
    d. Choose a rating from the comparison:
       - `again`: they blanked or got it wrong
       - `hard`: partially right, a significant gap

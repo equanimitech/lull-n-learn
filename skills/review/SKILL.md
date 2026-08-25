@@ -46,7 +46,7 @@ Find the node the weak card belongs to. Look for un-deepened neighbor nodes: nod
 
 If any exist, mention one in a single line:
 
-> "You're working through **<node>**. **<neighbor>** builds on it. `/learn` when ready."
+> "You're working through **<node>**. **<neighbor>** builds on it. `/deep-lesson` when ready."
 
 Do not push. Do not repeat if the user has already heard this in this session. One line, one time.
 

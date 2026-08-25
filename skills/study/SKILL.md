@@ -1,9 +1,9 @@
 ---
-name: review
-description: Run a spaced-repetition review session over due lull-n-learn cards. Use when the user runs /review, says "let's review", "quiz me", or wants to practice what they've been learning.
+name: study
+description: Run a spaced-repetition study session over due lull-n-learn cards. Use when the user runs /study, says "let's study", "quiz me", or wants to practice what they've been learning.
 ---
 
-# Review session
+# Study session
 
 An FSRS-driven retrieval session. Retrieval means production: the user answers before seeing anything. The user can stop at any time and stopping is always fine.
 

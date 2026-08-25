@@ -208,11 +208,11 @@ Rebuild and republish the artifact to the same URL (same file path). The artifac
 
 Find the next ready node using the same logic as Path C step 2. If one exists:
 
-Say: "**N** cards added from '**<node title>**'. Next up: **<next node>** — <description>. Continue, or `/recall` to practice what you've got?"
+Say: "**N** cards added from '**<node title>**'. Next up: **<next node>** — <description>. Continue, or `/study` to practice what you've got?"
 
 If the user says continue, flow into step 2 of this path with the next node. This creates a natural progression through the graph without the user needing to re-invoke the command.
 
-If no ready nodes remain, say: "That's the last node. Your map is fully deepened — **M** cards total. `/recall` when ready."
+If no ready nodes remain, say: "That's the last node. Your map is fully deepened — **M** cards total. `/study` when ready."
 
 ---
 

@@ -32,6 +32,24 @@ An FSRS-driven retrieval session. Retrieval means production: the user answers b
 4. If the user says "skip", move on without calling `rate`. The card stays due, unscored. Never comment on skips.
 5. When the batch is done or the user stops: close warmly in one line, e.g. "Good session." NO summary counts, NO "X of Y correct", NO streaks, NO "see you tomorrow".
 
+## Post-session: project node suggestion
+
+After the review session ends (batch done or user stops), check if any cards rated `again` or `hard` belong to a project. Look at those cards' tags for entries matching `project:<id>` and `node:<id>`.
+
+If found, load the project:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-get <projectId>
+```
+
+Find the node the weak card belongs to. Look for un-deepened neighbor nodes: nodes whose prerequisites include this one (edges where `from` is this node), or sibling nodes sharing the same prerequisites, that have status `mapped`.
+
+If any exist, mention one in a single line:
+
+> "You're working through **<node>**. **<neighbor>** builds on it. `/learn` when ready."
+
+Do not push. Do not repeat if the user has already heard this in this session. One line, one time.
+
 ## Anti-guilt rules (hard constraints)
 
 - Never show how many cards are due, remaining, or overdue.

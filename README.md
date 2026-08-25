@@ -8,8 +8,25 @@ Local-first. Anti-guilt. Zero-config.
 
 ## Install
 
-```bash
-claude plugin add equanimitech/lull-n-learn
+Add the equanimitech marketplace to `~/.claude/settings.json` (one-time):
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "equanimitech": {
+      "source": {
+        "source": "github",
+        "repo": "equanimitech/claude-plugins"
+      }
+    }
+  }
+}
+```
+
+Then in any Claude Code session:
+
+```
+/plugin install lull-n-learn
 ```
 
 ## How it works

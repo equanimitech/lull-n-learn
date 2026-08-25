@@ -15,7 +15,7 @@ This project is inspired by Young's framework. It is not affiliated with or endo
 
 Before learning a skill, research how it works, what subtopics exist, and what order to tackle them. AI has dramatically reduced the cost of this research.
 
-**Plugin feature:** `/learn <topic>` dispatches a workflow that maps the territory, sequences subtopics, and generates candidate cards.
+**Plugin feature:** `/deep-lesson <topic>` dispatches a workflow that maps the territory, sequences subtopics, and generates cards straight into the deck.
 
 ### 2. Focus: Sharpen Your Knife
 
@@ -39,7 +39,7 @@ Break down a complex skill into parts, practice them in isolation. AI can genera
 
 Memory is strengthened more by recall than by review. Practice remembering, not just looking.
 
-**Plugin feature:** The core of `/review`. Cards demand typed answers (production), not multiple choice (recognition). The status-line cue during processing is a retrieval prompt.
+**Plugin feature:** The core of `/study`. Cards demand typed answers (production), not multiple choice (recognition). The status-line cue during processing is a retrieval prompt.
 
 ### 6. Feedback: Don't Dodge the Punches
 
@@ -61,7 +61,7 @@ From Young's 2026 reflection:
 
 Understanding is built through self-explanation. The Feynman Technique: write out an explanation, find where you get stuck, go back and learn that part.
 
-**Plugin feature:** Feynman escalation in `/review` asks you to explain concepts, checks your explanation, and reveals gaps you didn't know you had.
+**Plugin feature:** Feynman escalation in `/study` asks you to explain concepts, checks your explanation, and reveals gaps you didn't know you had.
 
 From Young's 2026 reflection:
 

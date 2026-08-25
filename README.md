@@ -31,19 +31,21 @@ Then in any Claude Code session:
 
 ## How it works
 
-1. **Work normally.** When a session taught you something, run `/extract`: the agent mines the conversation for learning moments and files card candidates into an inbox.
-2. **Triage.** Run `/inbox` to promote candidates to your deck, edit them, or dismiss them. You never keep a card you didn't choose.
-3. **Review.** Run `/review` in a dedicated session. The FSRS algorithm picks due cards. You type your answer from memory. The agent scores it and reschedules.
-4. **Ambient cues (optional).** Wire the status line script into your settings and one due card's front appears as a retrieval cue. One cue, never a count.
+1. **Deep lesson.** Run `/deep-lesson <topic>`: the agent maps the territory, generates starter cards at every node, then deepens one section at a time with richer cards and a study guide.
+2. **Work normally.** When a session taught you something, run `/harvest`: the agent mines the conversation for learning moments and files card candidates into a sift queue.
+3. **Sift.** Run `/sift` to promote harvested candidates to your deck, edit them, or dismiss them. You never keep a card you didn't choose.
+4. **Study.** Run `/study` in a dedicated session. The FSRS algorithm picks due cards. You type your answer from memory. The agent scores it and reschedules.
+5. **Ambient cues (optional).** Wire the status line script into your settings and one due card's front appears as a retrieval cue. One cue, never a count.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/review` | FSRS-driven retrieval session |
-| `/inbox` | Triage extracted card candidates |
-| `/add "front" "back"` | Create a card manually |
-| `/extract` | Mine the current session for card candidates |
+| `/deep-lesson <topic>` | Metalearning engine: map a topic, deepen nodes, generate cards and study guide |
+| `/study` | FSRS-driven retrieval session |
+| `/sift` | Triage harvested card candidates |
+| `/card "front" "back"` | Create a card manually |
+| `/harvest` | Mine the current session for card candidates |
 
 ## Status line (optional)
 

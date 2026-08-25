@@ -5,7 +5,7 @@ description: Metalearning engine that researches a topic, builds a living knowle
 
 # /deep-lesson — Metalearning Engine
 
-Operationalizes Scott Young's Metalearning principle: "First draw a map." The map is a living artifact that grows as the learner progresses. Every node arrives with starter cards so the learner has something to practice immediately; deepening adds richer, harder cards as understanding grows.
+Operationalizes Scott Young's Metalearning principle: "First draw a map." The map is a living artifact that grows as the learner progresses — both a progress map and a study guide you come back to between review sessions. Every node arrives with starter cards so the learner has something to practice immediately; deepening adds richer, harder cards and guide content as understanding grows.
 
 ## Determine the path
 
@@ -64,7 +64,7 @@ Use the Workflow tool with the following structure. Adapt the prompt details to 
 
 **Map phase** (sequential, after scout):
 - One synthesizer agent receives all scout outputs and produces:
-  - `nodes[]`: concept subtopics with `{ id, title, description, status: 'mapped', cardIds: [], research: null, starterCards: [] }`
+  - `nodes[]`: concept subtopics with `{ id, title, description, status: 'mapped', cardIds: [], research: null, guide: null }`
   - `edges[]`: prerequisite relationships as `{ from, to }`
   - `existingCoverage`: which nodes are already covered by existing cards
   - `suggestedStart`: the best first node to deepen (prerequisites met, high learning value)
@@ -127,7 +127,7 @@ List the other ready nodes briefly. If the user confirms, flow directly into **P
 
 ## Path B: Deepen a node
 
-Deepening adds richer cards — conceptual questions, procedural drills, edge cases, connections — on top of the starter cards that already exist. Each deepening pass adds a layer of understanding.
+Deepening adds richer cards — layered by difficulty — and produces guide content (reference material rendered in the artifact). Each deepening pass adds a layer of understanding on top of the starter cards that already exist.
 
 ### 1. Load the project
 
@@ -153,14 +153,21 @@ Use the Workflow tool:
 - If user sources exist, one agent per source re-reads it for content relevant to this node
 
 **Generate phase** (sequential, after research):
-- One agent produces cards from the research, layered by difficulty:
-  - **Comprehension cards** — paraphrase, explain in your own words, identify components
-  - **Application cards** — procedural drills, "given X, what happens?", worked examples
-  - **Analysis cards** — compare/contrast with related nodes, edge cases, "why not Y instead?"
-  - Tag with `project:<projectId>,node:<nodeId>,<topic-tags>`
-  - Skip concepts already covered by existing cards (including starter cards)
-  - For each card, note which source it came from
-  - Return `{ research: Research, candidates: Candidate[] }`
+- One agent produces TWO outputs from the research:
+  1. **Cards**, layered by difficulty:
+     - **Comprehension cards** — paraphrase, explain in your own words, identify components
+     - **Application cards** — procedural drills, "given X, what happens?", worked examples
+     - **Analysis cards** — compare/contrast with related nodes, edge cases, "why not Y instead?"
+     - Tag with `project:<projectId>,node:<nodeId>,<topic-tags>`
+     - Skip concepts already covered by existing cards (including starter cards)
+     - For each card, note which source it came from
+  2. **Guide content**: a markdown study guide section for this node — the reference material the learner comes back to between review sessions. Include:
+     - Key concepts and their relationships
+     - Visual aids where they help: diagrams (mermaid), tables, Unicode art (chess boards, circuit diagrams, etc.)
+     - Worked examples
+     - Links to authoritative sources (web URLs, file paths)
+     - Common mistakes or misconceptions
+  - Return `{ research: Research, candidates: Candidate[], guide: string }`
 
 The Research object structure:
 ```json
@@ -174,14 +181,24 @@ The Research object structure:
 }
 ```
 
+**Guide content quality rules:**
+- Write for a learner returning to refresh, not a first-time reader — they'll have the cards
+- Use markdown: headers, lists, tables, code blocks, links
+- Inline links with `[text](url)` for source references
+- For visual domains (chess, music, circuits, geography), use Unicode art, ASCII diagrams, or mermaid blocks — the artifact renders mermaid natively via `<pre class="mermaid">`
+- Keep it concise: the guide section for one node should be 200-500 words, not an essay
+- Front and back of cards can contain markdown links too (e.g. `[Sicilian Defense](https://en.wikipedia.org/wiki/Sicilian_Defence)`)
+
 ### 5. Add cards to the deck
 
 Cards from deepening go straight to the deck — the user chose to study this topic, and the inbox filter adds friction here.
 
+Construct the card's `ref` URL from the artifact URL and the node ID: `<artifactUrl>#<nodeId>`. This links each card back to its study guide section.
+
 For each card returned by the workflow:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" add --front "<front>" --back "<back>" --tags "project:<projectId>,node:<nodeId>,<topic-tags>" --source "deep-lesson"
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" add --front "<front>" --back "<back>" --tags "project:<projectId>,node:<nodeId>,<topic-tags>" --source "deep-lesson" --ref "<artifactUrl>#<nodeId>"
 ```
 
 Collect the returned card IDs.
@@ -194,15 +211,20 @@ node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-add-cards <projectId> <nodeId> 
 
 ### 7. Update the node
 
-Update the project with the node's status set to `deepened` and the `research` object attached:
+Update the project with the node's status set to `deepened`, the `research` object attached, and the `guide` content set:
 
 ```bash
 echo '<updated-project-json>' | node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-update <projectId>
 ```
 
+The node in the updated JSON should have:
+- `status: "deepened"`
+- `research: { sources, synthesis, excluded, generatedAt }`
+- `guide: "<markdown guide content>"`
+
 ### 8. Republish the artifact
 
-Rebuild and republish the artifact to the same URL (same file path). The artifact now shows the deepened node with its research section expanded.
+Rebuild and republish the artifact to the same URL (same file path). The artifact now shows the deepened node with its guide content and research section expanded. See the **Artifact Design** section for how guide content renders.
 
 ### 9. Suggest the next node
 
@@ -246,13 +268,17 @@ Follow **Path B** from step 3 onward with the chosen node.
 
 ## Artifact Design
 
-The knowledge map artifact follows the equanimitech design system. Use the `artifact-design` skill before building it.
+The artifact is a **study guide**, not just a progress map. Mapped nodes show a title, description, and starter card count. Deepened nodes expand to show guide content (the reference material) and research transparency (sources consulted). The artifact is the thing you open between review sessions to refresh context.
+
+Use the `artifact-design` skill before building it.
 
 **Key constraints:**
 - Google Fonts for Inter and JetBrains Mono (artifact CSP allows `fonts.googleapis.com`)
 - Mermaid graph at the top (`<pre class="mermaid">`) showing concept nodes + prerequisite edges
 - Node list below as hairline-bordered cells in a 1px-gap grid
-- Deepened nodes expand via native `<details>` to show Research sections
+- Deepened nodes expand via native `<details>` to show: guide content (rendered markdown), then research transparency (sources, synthesis, excluded)
+- Each node gets an `id` attribute matching its node ID, so card refs (`<artifactUrl>#<nodeId>`) scroll to the right section
+- Guide content renders as HTML from the node's `guide` markdown field — convert markdown to HTML inline (headers, lists, tables, code blocks, links, mermaid blocks via `<pre class="mermaid">`)
 - Theme-aware: light palette on `:root`, dark overrides per the artifact system's convention
 - Anti-guilt: no progress bars, no completion percentages, no "X of Y" counts
 - Square corners, hairline rules, flat at rest, no shadows
@@ -299,16 +325,27 @@ The knowledge map artifact follows the equanimitech design system. Use the `arti
 
 <!-- Node list -->
 <section>
-  <details> <!-- one per node -->
+  <details id="{nodeId}"> <!-- one per node, id for anchor linking -->
     <summary>
       <span class="status-badge">mapped</span>
       <span class="node-title">Node Title</span>
       <span class="card-count">3 cards</span>
     </summary>
     <p class="description">One-line description...</p>
-    <!-- If deepened: research section -->
-    <div class="research">
-      <h3>Sources & reasoning</h3>
+
+    <!-- If deepened: guide content first (the study material) -->
+    <div class="guide">
+      <!-- Rendered from node.guide markdown field -->
+      <h3>Key concepts</h3>
+      <p>...</p>
+      <table>...</table>
+      <pre class="mermaid">...</pre> <!-- diagrams if relevant -->
+      <!-- Links to sources inline -->
+    </div>
+
+    <!-- Then research transparency (how the guide was produced) -->
+    <details class="research">
+      <summary>Sources & reasoning</summary>
       <ul class="sources">
         <li><span class="source-type">web</span> Reference: contribution</li>
       </ul>
@@ -317,9 +354,18 @@ The knowledge map artifact follows the equanimitech design system. Use the `arti
         <summary>What was considered and excluded</summary>
         <ul>...</ul>
       </details>
-    </div>
+    </details>
   </details>
 </section>
 ```
 
 Apply Mermaid node styling via `classDef` to reflect status colors. Mark the suggested starting node distinctly.
+
+**Guide content styling:**
+- The `.guide` div renders the node's markdown guide as HTML
+- Prose inherits body font (Inter), code blocks use JetBrains Mono
+- Tables get hairline borders, no outer border
+- Links use the accent color
+- Mermaid blocks inside guide content render natively
+- Unicode art (chess boards, etc.) renders in JetBrains Mono inside `<pre>` blocks
+- Guide content is capped at 62ch line width, matching the prose measure

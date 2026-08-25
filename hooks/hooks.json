@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"lull-n-learn active. Skills: /review (retrieval session), /answer (score the status-line cue), /inbox (triage extracted candidates), /add (create a card), /extract (mine this session for cards). Spaced repetition grounded in Scott Young's Ultralearning. Data: ~/.lull-n-learn/\"",
+            "command": "echo \"lull-n-learn active. Skills: /deep-lesson (map and deepen a topic), /study (retrieval session), /answer (score the status-line cue), /sift (triage harvested candidates), /card (create a card), /harvest (mine this session for cards). Spaced repetition grounded in Scott Young's Ultralearning. Data: ~/.lull-n-learn/\"",
             "timeout": 5
           }
         ]

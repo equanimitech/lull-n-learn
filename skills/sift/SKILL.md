@@ -1,9 +1,9 @@
 ---
-name: inbox
-description: Triage auto-extracted lull-n-learn card candidates. Use when the user runs /inbox, says "triage my inbox", "review the extracted cards", or asks what's waiting in the learning inbox.
+name: sift
+description: Triage auto-extracted lull-n-learn card candidates from session harvesting. Use when the user runs /sift, says "triage my inbox", "review the extracted cards", or asks what's waiting in the learning inbox.
 ---
 
-# Inbox triage
+# Sift through candidates
 
 Candidates extracted from work sessions wait here for the user's judgment. The user never keeps a card they didn't choose; choosing what to learn is itself metalearning (Scott Young's principle #1).
 
@@ -13,7 +13,7 @@ Candidates extracted from work sessions wait here for the user's judgment. The u
 
    node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" inbox-list
 
-2. If empty: say the inbox is empty and mention that /extract at the end of a rich session fills it. Stop.
+2. If empty: say the inbox is empty and mention that /harvest at the end of a rich session fills it. Stop.
 3. Say how many candidates are waiting (a triage queue count is fine; due-card counts are not), then present them ONE at a time: front, back, and context. Offer three moves:
    - **keep**: node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" inbox-promote <id>
    - **edit**: agree on better wording with the user, then

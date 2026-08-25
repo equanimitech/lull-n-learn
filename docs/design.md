@@ -42,7 +42,7 @@ demands your attention.
 - `claude plugin add lull-n-learn` -- single command install
 - Zero config to start. No Python, no build step, no API keys
 - Works immediately: extraction happens automatically after sessions
-- `/add` lets you create cards before any extraction runs
+- `/card` lets you create cards before any extraction runs
 - Pure JavaScript, no external dependencies beyond Claude Code
 - Data is plain JSON files you can read, edit, or back up
 
@@ -71,7 +71,7 @@ Which Ultralearning principles the plugin operationalizes, and how:
 
 | Principle | Plugin feature | Version |
 |---|---|---|
-| **Metalearning** | `/learn <topic>` -- workflow maps the territory, sequences subtopics, generates initial cards | v1 |
+| **Metalearning** | `/deep-lesson <topic>` -- workflow maps the territory, sequences subtopics, generates cards straight to deck | v0 |
 | **Focus** | Not the plugin's job. It never demands attention, only offers it | -- |
 | **Directness** | Cards extracted from real work conversations, not abstract study material | v0 |
 | **Drill** | `/drill` generates variations targeting weak cards (AI-generated practice problems) | v1 |
@@ -111,11 +111,11 @@ Three surfaces, one data layer.
      |  Learning   |  |  Work    |  |  Workflow    |
      |  Session    |  |  Session |  |  (bg)        |
      |             |  |  Hook    |  |              |
-     |  /review    |  |  HUD:    |  |  Deep        |
-     |  /learn     |  |  one cue |  |  Research    |
+     |  /study     |  |  HUD:    |  |  Deep        |
+     |  /deep-les  |  |  one cue |  |  Research    |
      |  /drill     |  |  during  |  |  lesson      |
-     |  /inbox     |  |  process |  |  plans       |
-     |  /add       |  |          |  |              |
+     |  /sift      |  |  process |  |  plans       |
+     |  /card      |  |          |  |              |
      └─────────────┘  └──────────┘  └──────────────┘
 ```
 
@@ -124,16 +124,16 @@ Three surfaces, one data layer.
 A dedicated Claude Code session with the plugin loaded. The user opens it
 deliberately. Reward, not interception.
 
-- `/review` -- FSRS picks due cards, presents one at a time. User types
+- `/study` -- FSRS picks due cards, presents one at a time. User types
   their answer (production). Agent scores (correct / partial / missed).
   FSRS updates scheduling. Optionally escalates to Feynman (v1).
-- `/learn <topic>` -- metalearning. Workflow maps the territory, sequences
-  subtopics, generates candidate cards into inbox (v1).
+- `/deep-lesson <topic>` -- metalearning. Workflow maps the territory, sequences
+  subtopics, generates cards straight to deck.
 - `/drill <card-or-topic>` -- generates practice variations targeting
   weak spots. Variable input/output (v1).
-- `/inbox` -- shows auto-extracted candidates. User promotes, edits, or
+- `/sift` -- shows auto-harvested candidates. User promotes, edits, or
   dismisses. Choosing what to learn is itself metalearning.
-- `/add "front" "back"` -- manual card creation, straight to deck.
+- `/card "front" "back"` -- manual card creation, straight to deck.
 - `/progress` -- retention picture. No guilt metrics (v1).
 
 ### Surface 2: The Work Session Hook (ambient)
@@ -153,15 +153,15 @@ finishes.
 
 The user mentally retrieves or doesn't. The cue is a gift, not a demand.
 
-### Surface 3: Workflows (metalearning engine, v1)
+### Surface 3: Workflows (metalearning engine)
 
-`/learn <topic>` dispatches a background workflow:
+`/deep-lesson <topic>` dispatches a background workflow:
 
 1. Fans out agents to research the topic (Context7, WebSearch, etc.)
 2. Maps subtopics, prerequisites, sequencing
-3. Generates candidate cards (atomic facts, conceptual questions, procedural
+3. Generates cards (atomic facts, conceptual questions, procedural
    drills)
-4. Writes to `inbox.json`
+4. Writes straight to `cards.json` (no inbox triage for deliberate study)
 
 Young's Principle #1 (Metalearning): the map before the walk.
 
@@ -225,7 +225,7 @@ Session transcript
        |
   inbox.json (unreviewed)
        |
-  /inbox -> user promotes, edits, or dismisses
+  /sift -> user promotes, edits, or dismisses
        |
   cards.json (active deck, FSRS-scheduled)
 ```
@@ -282,7 +282,7 @@ about what wasn't reviewed.
 Example interaction:
 
 ```
-/review
+/study
 
 What does the borrow checker enforce?
 > It ensures single ownership of data and prevents data races at compile time
@@ -300,34 +300,35 @@ What's the difference between impl Trait and dyn Trait?
 
 ## 6. v0 Scope
 
-Smallest thing that proves the core loop: extract, triage, review, schedule.
+Smallest thing that proves the core loop: study, harvest, sift, recall, schedule.
 
 ### v0 ships
 
 1. **`SessionEnd` hook** -- extracts card candidates, writes to `inbox.json`
-2. **`/inbox`** -- review candidates, promote to deck or dismiss
-3. **`/review`** -- FSRS-driven retrieval session (production + scoring)
-4. **`/add`** -- manual card creation
-5. **Status line hook** -- one due card cue during processing in work sessions
-6. **Local JSON** at `~/.lull-n-learn/`
-7. **`THEORY.md`** -- Scott Young attribution and principle mapping
+2. **`/deep-lesson <topic>`** -- metalearning engine: map, deepen, generate cards
+3. **`/sift`** -- triage harvested candidates, promote to deck or dismiss
+4. **`/study`** -- FSRS-driven retrieval session (production + scoring)
+5. **`/card`** -- manual card creation
+6. **`/harvest`** -- mine the current session for card candidates
+7. **Status line hook** -- one due card cue during processing in work sessions
+8. **Local JSON** at `~/.lull-n-learn/`
+9. **`THEORY.md`** -- Scott Young attribution and principle mapping
 
 ### v0 does not ship
 
-- `/learn` (metalearning workflows)
 - `/drill` (variation generation)
 - Feynman escalation
 - `/progress` (retention curves)
 - PushNotification nudge
-- Learning projects (topic + lesson plan grouping)
 
 ### v0 success criteria
 
 After a week of normal Claude Code work sessions:
 
-- The inbox has 20+ meaningful card candidates (extraction works)
-- Running `/review` for 5 minutes produces genuine retrieval moments on
+- The inbox has 20+ meaningful card candidates (harvesting works)
+- Running `/study` for 5 minutes produces genuine retrieval moments on
   things you encountered in real work (the loop is valuable)
+- `/deep-lesson` maps a topic and produces cards that hit the right level
 - The status line cue during processing feels like a gift, not an
   interruption (the ambient surface is right)
 
@@ -344,9 +345,11 @@ lull-n-learn/
 |   +-- session-end-extract.md       # SessionEnd: extract candidates
 |   +-- status-line-cue.sh           # StatusLine: show one due card
 +-- skills/
-|   +-- review.md                    # /review command
-|   +-- inbox.md                     # /inbox command
-|   +-- add.md                       # /add command
+|   +-- deep-lesson/SKILL.md          # /deep-lesson command
+|   +-- study/SKILL.md               # /study command
+|   +-- sift/SKILL.md                # /sift command
+|   +-- card/SKILL.md                # /card command
+|   +-- harvest/SKILL.md             # /harvest command
 +-- lib/
 |   +-- fsrs.mjs                     # FSRS algorithm (pure JS)
 +-- THEORY.md                        # Scott Young attribution

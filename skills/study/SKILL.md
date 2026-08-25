@@ -17,7 +17,7 @@ An FSRS-driven retrieval session. Retrieval means production: the user answers b
 3. For each card, one at a time:
    a. Show ONLY the front, phrased as the question it is. Never reveal the back first. Never say how many cards are in the batch or remain.
    b. Wait for the user's typed answer.
-   c. Compare their answer to the back. Reveal the back and give one or two sentences of feedback: what they got, what they missed.
+   c. Compare their answer to the back. Reveal the back and give one or two sentences of feedback: what they got, what they missed. If the card has a `ref` field (a URL to the study guide section), mention it after feedback: "See the study guide: <ref>" — this lets the user look up context if they want to go deeper. Don't repeat the ref on cards rated `easy`.
    d. Choose a rating from the comparison:
       - `again`: they blanked or got it wrong
       - `hard`: partially right, a significant gap

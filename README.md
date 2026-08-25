@@ -1,4 +1,4 @@
-# ultralearn
+# Lull & Learn
 
 Agent-native spaced repetition for Claude Code.
 
@@ -9,7 +9,7 @@ Local-first. Anti-guilt. Zero-config.
 ## Install
 
 ```bash
-claude plugin add equanimitech/ultralearn
+claude plugin add equanimitech/lull-n-learn
 ```
 
 ## How it works
@@ -33,7 +33,7 @@ See [THEORY.md](THEORY.md) for how the plugin maps to Scott Young's 9 Ultralearn
 
 ## Data
 
-All data lives in `~/.ultralearn/` as plain JSON. No account, no server, no sync. You own your learning state.
+All data lives in `~/.lull-n-learn/` as plain JSON. No account, no server, no sync. You own your learning state.
 
 ## License
 

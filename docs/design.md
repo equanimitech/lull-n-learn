@@ -1,10 +1,10 @@
-# Ultralearn: Agent-Native Learning for Claude Code
+# Lull & Learn: Agent-Native Learning for Claude Code
 
 ## TL;DR
 
 - **Goal:** A standalone Claude Code plugin that turns real work sessions into spaced-repetition learning, grounded in Scott Young's Ultralearning (9 principles).
 - **Key decisions:** Standalone plugin (no zenborg/keel dependency); FSRS algorithm (not SM-2); agent-extracted card funnel (inbox model); browser is unreliable so the learning surface is a dedicated Claude Code session; anti-guilt design (no counters, no streaks, no debt).
-- **Open questions:** Whether `SessionEnd` hook receives transcript content for card extraction; naming (deferred).
+- **Open questions:** Whether `SessionEnd` hook receives transcript content for card extraction.
 - **Cascades:** None. New standalone project.
 
 ---
@@ -39,7 +39,7 @@ demands your attention.
 
 ### Accessibility (anyone can use this)
 
-- `claude plugin add ultralearn` -- single command install
+- `claude plugin add lull-n-learn` -- single command install
 - Zero config to start. No Python, no build step, no API keys
 - Works immediately: extraction happens automatically after sessions
 - `/add` lets you create cards before any extraction runs
@@ -102,7 +102,7 @@ Three surfaces, one data layer.
 
 ```
 ┌──────────────────────────────────────────────────┐
-│                Local JSON (~/.ultralearn/)        │
+│                Local JSON (~/.lull-n-learn/)        │
 │  cards.json  inbox.json  projects.json           │
 │  fsrs-state.json  config.json                    │
 └──────────┬───────────────┬───────────────┬───────┘
@@ -165,7 +165,7 @@ The user mentally retrieves or doesn't. The cue is a gift, not a demand.
 
 Young's Principle #1 (Metalearning): the map before the walk.
 
-### Data layer: `~/.ultralearn/`
+### Data layer: `~/.lull-n-learn/`
 
 All local JSON. No server, no account, no sync.
 
@@ -309,7 +309,7 @@ Smallest thing that proves the core loop: extract, triage, review, schedule.
 3. **`/review`** -- FSRS-driven retrieval session (production + scoring)
 4. **`/add`** -- manual card creation
 5. **Status line hook** -- one due card cue during processing in work sessions
-6. **Local JSON** at `~/.ultralearn/`
+6. **Local JSON** at `~/.lull-n-learn/`
 7. **`THEORY.md`** -- Scott Young attribution and principle mapping
 
 ### v0 does not ship
@@ -337,7 +337,7 @@ thesis is wrong.
 ### v0 file structure
 
 ```
-ultralearn/
+lull-n-learn/
 +-- .claude-plugin/
 |   +-- plugin.json
 +-- hooks/

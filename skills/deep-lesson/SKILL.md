@@ -1,11 +1,11 @@
 ---
-name: learn
-description: Metalearning engine that researches a topic, builds a living knowledge map artifact, and deepens nodes one at a time to generate spaced-repetition card candidates. Use when the user runs /learn, says "let's learn about X", "map this topic", "I want to study X", or wants to deepen a concept node.
+name: deep-lesson
+description: Metalearning engine that researches a topic, builds a living knowledge map artifact with starter cards at every node, and deepens progressively. Use when the user runs /deep-lesson, says "let's learn about X", "map this topic", "I want to study X", or wants to deepen a concept node.
 ---
 
-# /learn — Metalearning Engine
+# /deep-lesson — Metalearning Engine
 
-Operationalizes Scott Young's Metalearning principle: "First draw a map." Two phases: scout + map (research the territory, produce a concept graph), and deepen (pick one node, research it thoroughly, generate card candidates). The map is a living artifact that grows as the learner progresses.
+Operationalizes Scott Young's Metalearning principle: "First draw a map." The map is a living artifact that grows as the learner progresses. Every node arrives with starter cards so the learner has something to practice immediately; deepening adds richer, harder cards as understanding grows.
 
 ## Determine the path
 
@@ -17,9 +17,9 @@ node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-list
 
 Then check the user's input:
 
-1. **New topic** — the user said `/learn <topic>` and no existing project matches that topic. Go to **Path A**.
-2. **Continue with named node** — an active project exists and the user said `/learn <node-title>`. Go to **Path B**.
-3. **Continue without node** — an active project exists and the user said `/learn` with no argument. Go to **Path C**.
+1. **New topic** — the user said `/deep-lesson <topic>` and no existing project matches that topic. Go to **Path A**.
+2. **Continue with named node** — an active project exists and the user said `/deep-lesson <node-title>`. Go to **Path B**.
+3. **Continue without node** — an active project exists and the user said `/deep-lesson` with no argument. Go to **Path C**.
 
 If multiple projects exist and no topic is specified, ask the user which project to continue.
 
@@ -64,15 +64,40 @@ Use the Workflow tool with the following structure. Adapt the prompt details to 
 
 **Map phase** (sequential, after scout):
 - One synthesizer agent receives all scout outputs and produces:
-  - `nodes[]`: concept subtopics with `{ id, title, description, status: 'mapped', cardIds: [], research: null }`
+  - `nodes[]`: concept subtopics with `{ id, title, description, status: 'mapped', cardIds: [], research: null, starterCards: [] }`
   - `edges[]`: prerequisite relationships as `{ from, to }`
   - `existingCoverage`: which nodes are already covered by existing cards
   - `suggestedStart`: the best first node to deepen (prerequisites met, high learning value)
   - `scoutSources`: per-node source citations for Layer 2 transparency
 
-Use a JSON schema for the synthesizer's return value so the output is structured.
+**Starter card phase** (sequential, after map):
+- One agent receives the full map and generates **2–3 starter cards per node**:
+  - One definitional card ("What is X?") — the concept's identity
+  - One relational card ("How does X relate to Y?") — ties the node to its neighbors in the graph
+  - Optionally one "why does it matter?" card — when the node's significance isn't obvious from its title
+  - Tag each with `project:<projectId>,node:<nodeId>,starter,<topic-tags>`
+  - Skip nodes already covered by existing cards
+  - Return `{ nodeId, cards: [{ front, back, tags }] }` per node
 
-### 5. Save the project
+Use a JSON schema for the synthesizer's and card generator's return values so the output is structured.
+
+### 5. Add starter cards to the deck
+
+Starter cards go straight to the deck — they are simple, definitional, and don't need triage.
+
+For each starter card returned by the workflow:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" add --front "<front>" --back "<back>" --tags "<tags>" --source "deep-lesson"
+```
+
+Collect the returned card IDs. Associate them with their nodes via:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-add-cards <projectId> <nodeId> --cards id1,id2,...
+```
+
+### 6. Save the project
 
 Pipe the synthesized graph back into the project:
 
@@ -82,9 +107,9 @@ echo '<project-json>' | node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-update 
 
 The project JSON must include the `nodes`, `edges`, `sources`, `topic`, `createdAt`, and `artifactUrl` fields.
 
-### 6. Publish the knowledge map artifact
+### 7. Publish the knowledge map artifact
 
-Build and publish the artifact following the design spec in the **Artifact Design** section below.
+Build and publish the artifact following the design spec in the **Artifact Design** section below. The artifact should show the starter card count per node.
 
 After publishing, update the project's `artifactUrl` field:
 
@@ -92,15 +117,17 @@ After publishing, update the project's `artifactUrl` field:
 echo '<updated-project-json>' | node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-update <projectId>
 ```
 
-### 7. Close
+### 8. Suggest deepening
 
-Say: "Your map is ready. Run `/learn` to start deepening a node."
+Say: "Your map has **N** nodes and **M** starter cards across them. **<suggested node>** is a good place to go deeper — shall I?"
 
-Stop here. Do not generate cards. Do not deepen any node. The map is worth reviewing on its own.
+List the other ready nodes briefly. If the user confirms, flow directly into **Path B** step 3 for the suggested node. If they want to browse first, stop.
 
 ---
 
-## Path B: Deepen a named node
+## Path B: Deepen a node
+
+Deepening adds richer cards — conceptual questions, procedural drills, edge cases, connections — on top of the starter cards that already exist. Each deepening pass adds a layer of understanding.
 
 ### 1. Load the project
 
@@ -126,11 +153,13 @@ Use the Workflow tool:
 - If user sources exist, one agent per source re-reads it for content relevant to this node
 
 **Generate phase** (sequential, after research):
-- One agent produces card candidates from the research:
-  - Atomic facts, conceptual questions, procedural drills
-  - Tag with `project:<projectId>`, `node:<nodeId>`, plus topic tags
-  - Skip concepts already covered by existing cards
-  - For each candidate, note which source it came from
+- One agent produces cards from the research, layered by difficulty:
+  - **Comprehension cards** — paraphrase, explain in your own words, identify components
+  - **Application cards** — procedural drills, "given X, what happens?", worked examples
+  - **Analysis cards** — compare/contrast with related nodes, edge cases, "why not Y instead?"
+  - Tag with `project:<projectId>,node:<nodeId>,<topic-tags>`
+  - Skip concepts already covered by existing cards (including starter cards)
+  - For each card, note which source it came from
   - Return `{ research: Research, candidates: Candidate[] }`
 
 The Research object structure:
@@ -145,15 +174,25 @@ The Research object structure:
 }
 ```
 
-### 5. Write candidates to inbox
+### 5. Add cards to the deck
 
-For each candidate returned by the workflow:
+Cards from deepening go straight to the deck — the user chose to study this topic, and the inbox filter adds friction here.
+
+For each card returned by the workflow:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" inbox-add --front "<front>" --back "<back>" --tags "project:<projectId>,node:<nodeId>,<topic-tags>" --source "workflow" --context "<source-note>"
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" add --front "<front>" --back "<back>" --tags "project:<projectId>,node:<nodeId>,<topic-tags>" --source "deep-lesson"
 ```
 
-### 6. Update the node
+Collect the returned card IDs.
+
+### 6. Link cards to the node
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-add-cards <projectId> <nodeId> --cards id1,id2,...
+```
+
+### 7. Update the node
 
 Update the project with the node's status set to `deepened` and the `research` object attached:
 
@@ -161,13 +200,19 @@ Update the project with the node's status set to `deepened` and the `research` o
 echo '<updated-project-json>' | node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-update <projectId>
 ```
 
-### 7. Republish the artifact
+### 8. Republish the artifact
 
 Rebuild and republish the artifact to the same URL (same file path). The artifact now shows the deepened node with its research section expanded.
 
-### 8. Close
+### 9. Suggest the next node
 
-Say: "**N** candidates in your inbox from '**<node title>**'. Run `/inbox` to triage them."
+Find the next ready node using the same logic as Path C step 2. If one exists:
+
+Say: "**N** cards added from '**<node title>**'. Next up: **<next node>** — <description>. Continue, or `/study` to practice what you've got?"
+
+If the user says continue, flow into step 2 of this path with the next node. This creates a natural progression through the graph without the user needing to re-invoke the command.
+
+If no ready nodes remain, say: "That's the last node. Your map is fully deepened — **M** cards total. `/study` when ready."
 
 ---
 
@@ -243,7 +288,7 @@ The knowledge map artifact follows the equanimitech design system. Use the `arti
 **Structure:**
 
 ```html
-<title>Learn: {topic}</title>
+<title>Deep Lesson: {topic}</title>
 
 <!-- Mermaid knowledge graph -->
 <pre class="mermaid">
@@ -258,7 +303,7 @@ The knowledge map artifact follows the equanimitech design system. Use the `arti
     <summary>
       <span class="status-badge">mapped</span>
       <span class="node-title">Node Title</span>
-      <span class="card-count">0 cards</span>
+      <span class="card-count">3 cards</span>
     </summary>
     <p class="description">One-line description...</p>
     <!-- If deepened: research section -->

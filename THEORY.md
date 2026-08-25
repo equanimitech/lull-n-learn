@@ -4,7 +4,7 @@ This plugin is grounded in **Scott Young's Ultralearning** framework.
 
 ## Source Material
 
-- **Book:** *Ultralearning: Master Hard Skills, Outsmart the Competition, and Accelerate Your Career* by Scott Young (HarperBusiness, 2019)
+- **Book:** [*Ultralearning: Master Hard Skills, Outsmart the Competition, and Accelerate Your Career*](https://www.scotthyoung.com/blog/ultralearning/) by Scott Young (HarperBusiness, 2019)
 - **AI update:** ["I Wrote Ultralearning. This is What I'd Change Because of AI"](https://www.scotthyoung.com/blog/2026/04/29/ultralearning-ai/) by Scott Young (April 29, 2026)
 
 This project is inspired by Young's framework. It is not affiliated with or endorsed by Scott Young.

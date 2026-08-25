@@ -11,7 +11,7 @@
 
 ## Attribution
 
-This plugin is grounded in **Scott Young's Ultralearning** (2019) and his
+This plugin is grounded in **[Scott Young's Ultralearning](https://www.scotthyoung.com/blog/ultralearning/)** (2019) and his
 April 2026 reflection
 ["I Wrote Ultralearning. This is What I'd Change Because of AI"](https://www.scotthyoung.com/blog/2026/04/29/ultralearning-ai/).
 

@@ -2,7 +2,7 @@
 
 Agent-native spaced repetition for Claude Code.
 
-Cards extracted from your real work sessions, reviewed on your schedule, grounded in [Scott Young's Ultralearning](https://www.scotthyoung.com/blog/2026/04/29/ultralearning-ai/).
+Cards extracted from your real work sessions, reviewed on your schedule, grounded in [Scott Young's Ultralearning](https://www.scotthyoung.com/blog/ultralearning/).
 
 Local-first. Anti-guilt. Zero-config.
 

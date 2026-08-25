@@ -1,13 +1,13 @@
 {
-  "name": "ultralearn",
+  "name": "lull-n-learn",
   "version": "0.1.0",
   "description": "Agent-native spaced repetition for Claude Code. Cards extracted from your real work sessions, reviewed on your schedule, grounded in Scott Young's Ultralearning. Local-first, anti-guilt, zero-config.",
   "author": {
     "name": "EquanimiTech",
     "url": "https://equanimi.tech"
   },
-  "homepage": "https://github.com/equanimitech/ultralearn",
-  "repository": "https://github.com/equanimitech/ultralearn",
+  "homepage": "https://github.com/equanimitech/lull-n-learn",
+  "repository": "https://github.com/equanimitech/lull-n-learn",
   "license": "MIT",
   "keywords": [
     "learning",
@@ -15,6 +15,7 @@
     "ultralearning",
     "retrieval-practice",
     "calm-technology",
-    "equanimitech"
+    "equanimitech",
+    "lull"
   ]
 }

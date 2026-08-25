@@ -13,6 +13,12 @@ An FSRS-driven retrieval session. Retrieval means production: the user answers b
 
    node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" due --limit 10
 
+   If ARGUMENTS is non-empty, pass it as a tag filter:
+
+   node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" due --limit 10 --tag "ARGUMENTS"
+
+   This filters to cards whose tags contain the argument (e.g. `/study italian cooking` shows only cards tagged with "italian-cooking").
+
 2. If the list is empty: say "Nothing is due right now." and stop. Do NOT say when the next card is due, how many cards exist, or suggest coming back later.
 3. For each card, one at a time:
    a. Show ONLY the front, phrased as the question it is. Never reveal the back first. Never say how many cards are in the batch or remain.

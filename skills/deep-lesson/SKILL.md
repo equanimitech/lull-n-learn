@@ -5,281 +5,97 @@ description: Metalearning engine that researches a topic, builds a living knowle
 
 # /deep-lesson — Metalearning Engine
 
-Operationalizes Scott Young's Metalearning principle: "First draw a map." The map is a living artifact that grows as the learner progresses — both a progress map and a study guide you come back to between review sessions. Every node arrives with starter cards so the learner has something to practice immediately; deepening adds richer, harder cards and guide content as understanding grows.
+Autonomous workflow modeled on deep research: the user names a topic, the workflow calibrates their level, researches, maps, deepens, and generates cards. Fire-and-report — no mid-flow interaction.
 
-## Determine the path
+## 1. Gather context
 
-Run this first to decide which of the three paths to take:
+Run these in parallel to build the workflow args:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-list
-```
-
-Then check the user's input:
-
-1. **New topic** — the user said `/deep-lesson <topic>` and no existing project matches that topic. Go to **Path A**.
-2. **Continue with named node** — an active project exists and the user said `/deep-lesson <node-title>`. Go to **Path B**.
-3. **Continue without node** — an active project exists and the user said `/deep-lesson` with no argument. Go to **Path C**.
-
-If multiple projects exist and no topic is specified, ask the user which project to continue.
-
----
-
-## Path A: Scout + Map (new topic)
-
-### 1. Greet and gather sources
-
-Say: "Let's map **<topic>**."
-
-Ask: "Do you have any source material? PDFs, markdown files, docs you'd like me to work from?"
-
-Wait for the user's answer. If they provide file paths, note them. If they say no, proceed without sources.
-
-### 2. Create the project
-
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-create --topic "<topic>" --sources "<comma-separated-paths>"
-```
-
-Save the returned project ID.
-
-### 3. Read existing cards
-
-```bash
 node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" list
+git log --oneline -20 2>/dev/null
 ```
 
-Extract fronts and tags from existing cards to identify what the user already knows.
+Parse the user's input:
+- `/deep-lesson <topic>` → topic is the argument
+- `/deep-lesson <topic> --sources file1,file2` → topic + source file paths
+- `/deep-lesson <topic>: <node>` → topic + target node to focus on
+- `/deep-lesson` with no argument → continue the most recent project (use its topic)
 
-### 4. Dispatch the scout-and-map workflow
-
-Use the Workflow tool with the following structure. Adapt the prompt details to the specific topic.
-
-**Scout phase** (parallel):
-- One agent reads existing cards and extracts related fronts/tags
-- One agent does a broad survey of the topic using its own knowledge
-- If the topic is a library/framework, one agent uses Context7 (via ToolSearch for `mcp__context7__resolve-library-id` then `mcp__context7__query-docs`) to get current documentation
-- One agent uses WebSearch to survey the concept landscape and prerequisites
-- One agent per user-provided file reads and summarizes it
-
-**Map phase** (sequential, after scout):
-- One synthesizer agent receives all scout outputs and produces:
-  - `nodes[]`: concept subtopics with `{ id, title, description, status: 'mapped', cardIds: [], research: null, guide: null }`
-  - `edges[]`: prerequisite relationships as `{ from, to }`
-  - `existingCoverage`: which nodes are already covered by existing cards
-  - `suggestedStart`: the best first node to deepen (prerequisites met, high learning value)
-  - `scoutSources`: per-node source citations for Layer 2 transparency
-
-**Starter card phase** (sequential, after map):
-- One agent receives the full map and generates **2–3 starter cards per node**:
-  - One definitional card ("What is X?") — the concept's identity
-  - One relational card ("How does X relate to Y?") — ties the node to its neighbors in the graph
-  - Optionally one "why does it matter?" card — when the node's significance isn't obvious from its title
-  - Tag each with `project:<projectId>,node:<nodeId>,starter,<topic-tags>`
-  - Skip nodes already covered by existing cards
-  - Return `{ nodeId, cards: [{ front, back, tags }] }` per node
-
-Use a JSON schema for the synthesizer's and card generator's return values so the output is structured.
-
-### 5. Add starter cards to the deck
-
-Starter cards go straight to the deck — they are simple, definitional, and don't need triage.
-
-For each starter card returned by the workflow:
-
+If a project exists for this topic, also run:
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" add --front "<front>" --back "<back>" --tags "<tags>" --source "deep-lesson"
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-get <projectId>
 ```
 
-Collect the returned card IDs. Associate them with their nodes via:
+## 2. Dispatch the workflow
 
+Say: "Mapping **<topic>**." (nothing else — no questions, no waiting)
+
+Use the Workflow tool:
+```
+scriptPath: "${CLAUDE_PLUGIN_ROOT}/workflows/deep-lesson.js"
+args: {
+  topic: "<topic>",
+  sources: ["<path1>", "<path2>"],        // optional
+  targetNode: "<node title>",              // optional
+  existingProject: <project JSON or null>,
+  existingCards: <cards array>,
+  workContext: "<git log output + ls summary>"
+}
+```
+
+## 3. Persist results
+
+When the workflow returns, persist everything via CLI.
+
+**If new project** (`result.isNew`):
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-create --topic "<topic>" --sources "<sources>"
+```
+
+**For each card** in `result.deepened[].cards`:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" add --front "<front>" --back "<back>" --tags "<tags>" --source "deep-lesson" --ref "<artifactUrl>#<nodeId>"
+```
+
+**Link cards to nodes:**
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-add-cards <projectId> <nodeId> --cards id1,id2,...
 ```
 
-### 6. Save the project
-
-Pipe the synthesized graph back into the project:
-
+**Update project** with the full graph (nodes with status/research/guide, edges):
 ```bash
 echo '<project-json>' | node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-update <projectId>
 ```
 
-The project JSON must include the `nodes`, `edges`, `sources`, `topic`, `createdAt`, and `artifactUrl` fields.
+Set each deepened node's status to `deepened` and attach its `research` and `guide` fields from the workflow result. Nodes not deepened keep status `mapped`.
 
-### 7. Publish the knowledge map artifact
+## 4. Publish the artifact
 
-Build and publish the artifact following the design spec in the **Artifact Design** section below. The artifact should show the starter card count per node.
+Build and publish the knowledge map artifact following the **Artifact Design** section below. If the project already has an `artifactUrl`, republish to the same file path (same URL). Otherwise publish a new artifact and save the URL to the project.
 
-After publishing, update the project's `artifactUrl` field:
+## 5. Report
 
-```bash
-echo '<updated-project-json>' | node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-update <projectId>
-```
+Say: "**<topic>** — N nodes, M cards, K deepened. [link to artifact]"
 
-### 8. Suggest deepening
-
-Say: "Your map has **N** nodes and **M** starter cards across them. **<suggested node>** is a good place to go deeper — shall I?"
-
-List the other ready nodes briefly. If the user confirms, flow directly into **Path B** step 3 for the suggested node. If they want to browse first, stop.
-
----
-
-## Path B: Deepen a node
-
-Deepening adds richer cards — layered by difficulty — and produces guide content (reference material rendered in the artifact). Each deepening pass adds a layer of understanding on top of the starter cards that already exist.
-
-### 1. Load the project
-
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-get <projectId>
-```
-
-### 2. Find the node
-
-Search `project.nodes` for a node whose title matches the user's input (case-insensitive, partial match is fine). If not found, show the available node titles and ask the user to pick one.
-
-### 3. Check prerequisites
-
-Look at `project.edges` to find all edges where `to` is this node's id. For each prerequisite (the `from` node), check that its status is `mapped`, `deepened`, `learning`, or `mastered`. If any prerequisite is `unmapped`, warn the user: "**<prerequisite>** hasn't been mapped yet. You might want to deepen that first." Let the user decide whether to proceed.
-
-### 4. Dispatch the deepen workflow
-
-Use the Workflow tool:
-
-**Research phase** (parallel):
-- One agent does deep research on this specific subtopic
-- One agent uses Context7/WebSearch targeted at this node's concepts
-- If user sources exist, one agent per source re-reads it for content relevant to this node
-
-**Generate phase** (sequential, after research):
-- One agent produces TWO outputs from the research:
-  1. **Cards**, layered by difficulty:
-     - **Comprehension cards** — paraphrase, explain in your own words, identify components
-     - **Application cards** — procedural drills, "given X, what happens?", worked examples
-     - **Analysis cards** — compare/contrast with related nodes, edge cases, "why not Y instead?"
-     - Tag with `project:<projectId>,node:<nodeId>,<topic-tags>`
-     - Skip concepts already covered by existing cards (including starter cards)
-     - For each card, note which source it came from
-  2. **Guide content**: a markdown study guide section for this node — the reference material the learner comes back to between review sessions. Include:
-     - Key concepts and their relationships
-     - Visual aids where they help: diagrams (mermaid), tables, Unicode art (chess boards, circuit diagrams, etc.)
-     - Worked examples
-     - Links to authoritative sources (web URLs, file paths)
-     - Common mistakes or misconceptions
-  - Return `{ research: Research, candidates: Candidate[], guide: string }`
-
-The Research object structure:
-```json
-{
-  "sources": [
-    { "type": "user-file|web|context7|agent-knowledge", "reference": "...", "contribution": "..." }
-  ],
-  "synthesis": "how the sources were combined",
-  "excluded": ["what was considered and dropped, with reasons"],
-  "generatedAt": "ISO8601"
-}
-```
-
-**Guide content quality rules:**
-- Write for a learner returning to refresh, not a first-time reader — they'll have the cards
-- Use markdown: headers, lists, tables, code blocks, links
-- Inline links with `[text](url)` for source references
-- For visual domains (chess, music, circuits, geography), use Unicode art, ASCII diagrams, or mermaid blocks — the artifact renders mermaid natively via `<pre class="mermaid">`
-- Keep it concise: the guide section for one node should be 200-500 words, not an essay
-- Front and back of cards can contain markdown links too (e.g. `[Sicilian Defense](https://en.wikipedia.org/wiki/Sicilian_Defence)`)
-
-### 5. Add cards to the deck
-
-Cards from deepening go straight to the deck — the user chose to study this topic, and the inbox filter adds friction here.
-
-Construct the card's `ref` URL from the artifact URL and the node ID: `<artifactUrl>#<nodeId>`. This links each card back to its study guide section.
-
-For each card returned by the workflow:
-
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" add --front "<front>" --back "<back>" --tags "project:<projectId>,node:<nodeId>,<topic-tags>" --source "deep-lesson" --ref "<artifactUrl>#<nodeId>"
-```
-
-Collect the returned card IDs.
-
-### 6. Link cards to the node
-
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-add-cards <projectId> <nodeId> --cards id1,id2,...
-```
-
-### 7. Update the node
-
-Update the project with the node's status set to `deepened`, the `research` object attached, and the `guide` content set:
-
-```bash
-echo '<updated-project-json>' | node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-update <projectId>
-```
-
-The node in the updated JSON should have:
-- `status: "deepened"`
-- `research: { sources, synthesis, excluded, generatedAt }`
-- `guide: "<markdown guide content>"`
-
-### 8. Republish the artifact
-
-Rebuild and republish the artifact to the same URL (same file path). The artifact now shows the deepened node with its guide content and research section expanded. See the **Artifact Design** section for how guide content renders.
-
-### 9. Suggest the next node
-
-Find the next ready node using the same logic as Path C step 2. If one exists:
-
-Say: "**N** cards added from '**<node title>**'. Next up: **<next node>** — <description>. Continue, or `/study` to practice what you've got?"
-
-If the user says continue, flow into step 2 of this path with the next node. This creates a natural progression through the graph without the user needing to re-invoke the command.
-
-If no ready nodes remain, say: "That's the last node. Your map is fully deepened — **M** cards total. `/study` when ready."
-
----
-
-## Path C: Continue without node (suggest next)
-
-### 1. Load the project
-
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-get <projectId>
-```
-
-### 2. Find ready nodes
-
-A node is "ready" when:
-- Its status is `mapped` (not yet deepened)
-- All its prerequisites (nodes with edges pointing to it) have status `mapped`, `deepened`, `learning`, or `mastered`
-
-### 3. Suggest the best one
-
-Pick the ready node with the most prerequisites already in `learning` or `mastered` status. If tied, prefer the node that is most central to the graph (has the most downstream dependents).
-
-Say: "Next up: **<node title>** — <description>. Shall I deepen it, or would you prefer a different node?"
-
-List the other ready nodes briefly so the user can choose.
-
-### 4. When the user confirms
-
-Follow **Path B** from step 3 onward with the chosen node.
+Nothing else. No "shall I deepen more?" — the user comes back when ready.
 
 ---
 
 ## Artifact Design
 
-The artifact is a **study guide**, not just a progress map. Mapped nodes show a title, description, and starter card count. Deepened nodes expand to show guide content (the reference material) and research transparency (sources consulted). The artifact is the thing you open between review sessions to refresh context.
+The artifact is a **study guide**. Mapped nodes show title + description. Deepened nodes expand to show guide content and research transparency. The artifact is what you open between review sessions.
 
 Use the `artifact-design` skill before building it.
 
 **Key constraints:**
-- Google Fonts for Inter and JetBrains Mono (artifact CSP allows `fonts.googleapis.com`)
-- Mermaid graph at the top (`<pre class="mermaid">`) showing concept nodes + prerequisite edges
+- Google Fonts for Inter and JetBrains Mono
+- Mermaid graph at top (`<pre class="mermaid">`) showing concept nodes + prerequisite edges
 - Node list below as hairline-bordered cells in a 1px-gap grid
-- Deepened nodes expand via native `<details>` to show: guide content (rendered markdown), then research transparency (sources, synthesis, excluded)
-- Each node gets an `id` attribute matching its node ID, so card refs (`<artifactUrl>#<nodeId>`) scroll to the right section
-- Guide content renders as HTML from the node's `guide` markdown field — convert markdown to HTML inline (headers, lists, tables, code blocks, links, mermaid blocks via `<pre class="mermaid">`)
-- Theme-aware: light palette on `:root`, dark overrides per the artifact system's convention
+- Deepened nodes expand via `<details>` to show: guide content first, then research transparency
+- Each node gets an `id` attribute matching its node ID for anchor linking from card refs
+- Theme-aware: light palette on `:root`, dark overrides per artifact convention
 - Anti-guilt: no progress bars, no completion percentages, no "X of Y" counts
 - Square corners, hairline rules, flat at rest, no shadows
 
@@ -307,25 +123,22 @@ Use the `artifact-design` skill before building it.
 | mastered | stone-900 text, sage border | stone-50 text, sage border |
 | suggested | clay border, clay text label | clay border, clay text label |
 
-**Typography:** Inter for prose (body, descriptions, synthesis). JetBrains Mono for labels (status badges, source types, card counts). Prose capped at 62ch.
+**Typography:** Inter for prose, JetBrains Mono for labels. Prose capped at 62ch.
 
-**Layout:** Single centered track at 79ch. Spacing from the phi ladder: `1.618rem` between nodes, `2.618rem` between sections.
+**Layout:** Single centered track at 79ch. Phi spacing: `1.618rem` between nodes, `2.618rem` between sections.
 
 **Structure:**
 
 ```html
 <title>Deep Lesson: {topic}</title>
 
-<!-- Mermaid knowledge graph -->
 <pre class="mermaid">
   graph TD
     node1["Node Title"] --> node2["Node Title"]
-    ...
 </pre>
 
-<!-- Node list -->
 <section>
-  <details id="{nodeId}"> <!-- one per node, id for anchor linking -->
+  <details id="{nodeId}">
     <summary>
       <span class="status-badge">mapped</span>
       <span class="node-title">Node Title</span>
@@ -333,17 +146,10 @@ Use the `artifact-design` skill before building it.
     </summary>
     <p class="description">One-line description...</p>
 
-    <!-- If deepened: guide content first (the study material) -->
     <div class="guide">
-      <!-- Rendered from node.guide markdown field -->
-      <h3>Key concepts</h3>
-      <p>...</p>
-      <table>...</table>
-      <pre class="mermaid">...</pre> <!-- diagrams if relevant -->
-      <!-- Links to sources inline -->
+      <!-- Rendered from node.guide markdown -->
     </div>
 
-    <!-- Then research transparency (how the guide was produced) -->
     <details class="research">
       <summary>Sources & reasoning</summary>
       <ul class="sources">
@@ -359,13 +165,6 @@ Use the `artifact-design` skill before building it.
 </section>
 ```
 
-Apply Mermaid node styling via `classDef` to reflect status colors. Mark the suggested starting node distinctly.
+Apply Mermaid `classDef` for status colors. Mark the suggested starting node distinctly.
 
-**Guide content styling:**
-- The `.guide` div renders the node's markdown guide as HTML
-- Prose inherits body font (Inter), code blocks use JetBrains Mono
-- Tables get hairline borders, no outer border
-- Links use the accent color
-- Mermaid blocks inside guide content render natively
-- Unicode art (chess boards, etc.) renders in JetBrains Mono inside `<pre>` blocks
-- Guide content is capped at 62ch line width, matching the prose measure
+**Guide content styling:** Prose in Inter, code in JetBrains Mono. Tables get hairline borders. Links use clay accent. Mermaid blocks render natively. Guide content capped at 62ch.

@@ -11,23 +11,31 @@ An FSRS-driven retrieval session. Retrieval means production: the user answers b
 
 `$ARGUMENTS` may contain a tag to filter by (e.g. `rust`, `project:abc`). If present, pass it as `--tag <tag>` to the `due` command. If empty, fetch all due cards.
 
+## Start
+
+Lock the status line cue so it stays quiet during the study session:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" study-lock
+```
+
 ## Loop
 
 1. Fetch due cards **without answers**:
 
    node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" due --limit 10 --hide-back [--tag <tag>]
 
-   The `--hide-back` flag strips the `back` field so you cannot see — or leak — the answer before the user does. If `$ARGUMENTS` is non-empty, pass it as `--tag`.
+   The `--hide-back` flag strips the `back` field so you cannot see -- or leak -- the answer before the user does. If `$ARGUMENTS` is non-empty, pass it as `--tag`.
 
 2. If the list is empty: say "Nothing is due right now." and stop. Do NOT say when the next card is due, how many cards exist, or suggest coming back later.
 3. For each card, one at a time:
-   a. Show ONLY the front, phrased as the question it is. Never reveal the back first. Never say how many cards are in the batch or remain. Do NOT use `AskUserQuestion` with answer options — the user must type their answer freely with no choices to pick from.
+   a. Show ONLY the front, phrased as the question it is. Never reveal the back first. Never say how many cards are in the batch or remain. Do NOT use `AskUserQuestion` with answer options -- the user must type their answer freely with no choices to pick from.
    b. Wait for the user's typed answer.
    c. **After** the user answers, reveal the back:
 
       node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" reveal <cardId>
 
-      Compare their answer to the revealed back. Give one or two sentences of feedback: what they got, what they missed. If the response has a `ref` field (a URL to the study guide section), mention it after feedback: "See the study guide: <ref>" — this lets the user look up context if they want to go deeper. Don't repeat the ref on cards rated `easy`.
+      Compare their answer to the revealed back. Give one or two sentences of feedback: what they got, what they missed. If the response has a `ref` field (a URL to the study guide section), mention it after feedback: "See the study guide: <ref>" -- this lets the user look up context if they want to go deeper. Don't repeat the ref on cards rated `easy`.
    d. Choose a rating from the comparison:
       - `again`: they blanked or got it wrong
       - `hard`: partially right, a significant gap
@@ -40,7 +48,11 @@ An FSRS-driven retrieval session. Retrieval means production: the user answers b
       The command prints the updated card; its `fsrs.due` is the next review date.
    f. Mention the next review conversationally ("this one comes back in about 3 days"), then move to the next card. A card rated `again` may reappear later in this same session via a fresh `due` call; that is intended.
 4. If the user says "skip", move on without calling `rate`. The card stays due, unscored. Never comment on skips.
-5. When the batch is done or the user stops: close warmly in one line, e.g. "Good session." NO summary counts, NO "X of Y correct", NO streaks, NO "see you tomorrow".
+5. When the batch is done or the user stops: unlock the status line cue and close warmly in one line, e.g. "Good session." NO summary counts, NO "X of Y correct", NO streaks, NO "see you tomorrow".
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" study-unlock
+   ```
 
 ## Post-session: project node suggestion
 

@@ -25,10 +25,11 @@ Score the user's answer to the current status-line retrieval cue, rate the card,
    - `good`: right, perhaps imprecise at the edges
    - `easy`: right, instant, complete
 
-4. Apply the rating:
+4. Apply the rating and clear the cue so the status line picks a fresh card next time:
 
    ```bash
    node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" rate <cardId> <rating>
+   node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" clear-cue
    ```
 
 5. Respond in **one line**: what they got right or missed, and when it comes back (from the updated `fsrs.due`). Example:

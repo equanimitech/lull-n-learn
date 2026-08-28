@@ -155,8 +155,25 @@ const DEEPEN_SCHEMA = {
         },
         synthesis: { type: 'string' },
         excluded: { type: 'array', items: { type: 'string' } },
+        references: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['image', 'video', 'diagram'] },
+              url: { type: 'string', description: 'Source URL (image/video) or empty for diagrams' },
+              alt: { type: 'string', description: 'Descriptive alt text' },
+              title: { type: 'string', description: 'For videos: the video title' },
+              timestamp: { type: 'string', description: 'For videos: start timestamp (e.g. "2:34")' },
+              svg: { type: 'string', description: 'For diagrams: inline SVG markup' },
+              contribution: { type: 'string', description: 'What this reference adds to the node' },
+            },
+            required: ['type', 'contribution'],
+          },
+          description: 'Visual references: images found via web, videos from YouTube/educational platforms, agent-generated diagrams',
+        },
       },
-      required: ['sources', 'synthesis', 'excluded'],
+      required: ['sources', 'synthesis', 'excluded', 'references'],
     },
   },
   required: ['cards', 'guide', 'research'],
@@ -182,7 +199,10 @@ ${args.workContext || 'No work context available.'}
 
 TARGET NODE (user-requested focus, if any): ${args.targetNode || 'None — choose autonomously.'}
 
+USER-STATED LEVEL (from pre-flight question, if provided): ${args.userLevel || 'Not provided — infer from cards, project state, and work context.'}
+
 Rules:
+- When userLevel is provided, use it as the primary signal for levelAssessment. It overrides inferences from cards/context.
 - Set needsScout=true if no project exists or the map needs expanding.
 - For continuations (project exists), find nodes with status "mapped" whose prerequisites are all "deepened", "learning", or "mastered". These are ready to deepen.
 - If a targetNode is specified, put it first in nodesToDeepen regardless of prerequisites.
@@ -221,7 +241,7 @@ Use WebSearch (via ToolSearch) to find current information. Focus on:
 - Authoritative tutorials and documentation
 - Concept maps or learning paths others have created
 - Common prerequisites and learning sequences
-
+${(args.preferredSources && args.preferredSources.length > 0) ? `\nPRIORITY SOURCES (user-requested — search these first and weight them heavily):\n${args.preferredSources.map(s => `- ${s}`).join('\n')}\n` : ''}
 Return the concepts found with source citations.`,
       { label: 'web-search', phase: 'Scout', schema: SCOUT_SCHEMA }
     ),
@@ -320,7 +340,7 @@ Research this concept thoroughly:
 - Use WebSearch (via ToolSearch) for authoritative, current sources
 - If this is a library/framework concept, try Context7 (via ToolSearch) for docs
 - Draw on your training knowledge for foundational explanations
-
+${(args.preferredSources && args.preferredSources.length > 0) ? `\nPRIORITY SOURCES (user-requested — search these first and weight them heavily):\n${args.preferredSources.map(s => `- ${s}`).join('\n')}\n` : ''}
 Return a comprehensive but focused research summary. This will feed card generation and a study guide, so include:
 - Core definitions and mental models
 - How this concept connects to related concepts in the graph
@@ -328,7 +348,16 @@ Return a comprehensive but focused research summary. This will feed card generat
 - Common mistakes and misconceptions
 - Edge cases or subtle points
 
-Be thorough but stay focused on this one node.`,
+Be thorough but stay focused on this one node.
+
+Additionally, search for visual references that would help a learner understand this concept:
+- IMAGES: Search for diagrams, illustrations, or reference images. For regulatory/exam topics, look for official signs and symbols. For cooking/craft topics, look for technique photos. For games/strategy, generate board-state diagrams as SVG.
+- VIDEOS: Search for YouTube or educational videos that explain this concept well. Include the video title, URL, and a useful start timestamp if the video is long.
+- DIAGRAMS: For spatial or structural concepts, generate an inline SVG diagram that illustrates the key relationships or positions.
+
+Use WebFetch (via ToolSearch) to verify that image URLs are valid before including them.
+
+Return references in the research.references array. Each entry needs a type (image/video/diagram), the contribution it makes, and the URL or SVG content. Aim for 1-3 references per node — quality over quantity. Skip references if no genuinely useful visual exists for this concept.`,
       { label: `research:${node.title}`, phase: 'Deepen' }
     ),
     (research, node) => agent(
@@ -360,6 +389,10 @@ STUDY GUIDE RULES:
 - Keep it 200-500 words.
 - Include links to authoritative sources (web URLs).
 - Cover: key concepts, relationships, worked examples, common mistakes.
+- If the research includes visual references (research.references), mention them in the guide:
+  - For images: reference them by alt text ("See the diagram of X")
+  - For videos: include a markdown link with title and timestamp
+  - For diagrams: embed the SVG inline in the guide markdown
 
 RESEARCH TRANSPARENCY:
 - List every source consulted with what it contributed.

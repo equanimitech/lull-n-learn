@@ -64,13 +64,25 @@ If found, load the project:
 node "${CLAUDE_PLUGIN_ROOT}/lib/cli.mjs" project-get <projectId>
 ```
 
-Find the node the weak card belongs to. Look for un-deepened neighbor nodes: nodes whose prerequisites include this one (edges where `from` is this node), or sibling nodes sharing the same prerequisites, that have status `mapped`.
+Find the node the weak card belongs to.
 
-If any exist, mention one in a single line:
+**If the node has a `readTrace`:** The learner already studied this node. Mention the gap if one exists:
+
+> "You read **<node title>** earlier. The gap was around **<gap text>**. `/read <topic>: <node title>` to revisit."
+
+Use the first gap from `readTrace.gaps`. If there are no gaps, just suggest the re-read:
+
+> "**<node title>** might be worth a re-read. `/read <topic>: <node title>` when ready."
+
+**If the node has NO `readTrace`:** The learner hasn't studied this node yet — they went straight to cards. Suggest reading first:
+
+> "You haven't read through **<node title>** yet. `/read <topic>: <node title>` to learn it before reviewing."
+
+**If the node has un-deepened neighbors** (nodes whose prerequisites include this one, with status `mapped`): Fall back to the existing suggestion:
 
 > "You're working through **<node>**. **<neighbor>** builds on it. `/deep-lesson` when ready."
 
-Do not push. Do not repeat if the user has already heard this in this session. One line, one time.
+Do not push. Do not repeat if the user has already heard this in this session. One line, one time. Prefer the `/read` suggestion over the `/deep-lesson` suggestion when both apply.
 
 ## Anti-guilt rules (hard constraints)
 

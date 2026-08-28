@@ -112,12 +112,18 @@ Three surfaces, one data layer.
      |  Session    |  |  Session |  |  (bg)        |
      |             |  |  Hook    |  |              |
      |  /study     |  |  HUD:    |  |  Deep        |
-     |  /deep-les  |  |  one cue |  |  Research    |
-     |  /drill     |  |  during  |  |  lesson      |
-     |  /sift      |  |  process |  |  plans       |
+     |  /read  NEW |  |  one cue |  |  Research    |
+     |  /lesson NEW|  |  during  |  |  lesson      |
+     |  /deep-les  |  |  process |  |  plans       |
+     |  /drill     |  |          |  |              |
+     |  /sift      |  |          |  |              |
      |  /card      |  |          |  |              |
      └─────────────┘  └──────────┘  └──────────────┘
 ```
+
+### Teaching Surface (v0.6)
+
+`/read` and `/lesson` fill the acquisition gap between `/deep-lesson` (mapping) and `/study` (retrieval). They teach deepened nodes conversationally via Socratic walk-through — explain, check comprehension, adjust. A light trace (`readTrace`) on each node records what was covered and how it went, feeding `/study`'s card prioritization. See `docs/teaching-surface-design.md` for the full spec.
 
 ### Surface 1: The Learning Session (primary)
 

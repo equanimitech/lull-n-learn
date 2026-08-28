@@ -29,6 +29,11 @@ Practice the skill you want to get good at. Do the real thing, avoid substitutes
 
 **Plugin feature:** Cards are extracted from real work sessions, not abstract study material. You learn what you actually encountered, not a pre-built curriculum.
 
+**Plugin features (teaching surface):**
+- `/read <topic>: <node>` teaches a single concept through Socratic dialogue — explain, check, adjust. The agent teaches *from* the researched material rather than dumping it. Comprehension checks demand thinking, not recognition.
+- `/lesson <topic>` walks a learning path across multiple nodes in prerequisite order, with natural stopping points. The same Socratic loop, sequenced.
+- Together they close the acquisition gap: `/deep-lesson` maps → `/read` or `/lesson` acquires → `/study` retrieves.
+
 ### 4. Drill: Attack Your Weakest Point
 
 Break down a complex skill into parts, practice them in isolation. AI can generate infinite variations of practice problems.
@@ -47,6 +52,10 @@ Sparse or incomplete feedback slows learning. AI can enhance feedback in symboli
 
 **Plugin feature:** Agent scores your answers, reveals gaps, asks follow-up questions. Feynman escalation checks your explanations against the real answer.
 
+**Plugin features (teaching surface):**
+- During `/read`, comprehension checks catch misconceptions in real-time. The agent names the gap, re-explains from a different angle, and verifies the fix.
+- A light trace (`readTrace`) records comprehension signals and specific gaps. `/study` uses these to prioritize cards from weak nodes, closing the feedback loop between teaching and retrieval.
+
 ### 7. Retention: Don't Fill a Leaky Bucket
 
 Spacing and mnemonics combat forgetting. An AI agent can manage the logistical nightmare of tracking what you've learned and ensuring regular re-exposure.
@@ -62,6 +71,10 @@ From Young's 2026 reflection:
 Understanding is built through self-explanation. The Feynman Technique: write out an explanation, find where you get stuck, go back and learn that part.
 
 **Plugin feature:** Feynman escalation in `/study` asks you to explain concepts, checks your explanation, and reveals gaps you didn't know you had.
+
+**Plugin features (teaching surface):**
+- The Socratic hook opens each node with a concrete scenario that makes the concept feel necessary — building intuition before formalism.
+- Comprehension checks test mental models ("what would happen if..."), not definitions.
 
 From Young's 2026 reflection:
 
